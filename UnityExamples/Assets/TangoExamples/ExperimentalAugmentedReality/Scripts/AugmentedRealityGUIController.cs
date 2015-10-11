@@ -27,6 +27,12 @@ using Tango;
 /// </summary>
 public class AugmentedRealityGUIController : MonoBehaviour
 {
+
+	public enum MODE {ZOMBIE,COFFIN,SHOOT};
+	public MODE mode;
+	public GameObject coffin;
+	public GameObject bullet;
+
     // Constant value for controlling the position and size of debug overlay.
     public const float UI_LABEL_START_X = 15.0f;
     public const float UI_LABEL_START_Y = 15.0f;
@@ -78,6 +84,7 @@ public class AugmentedRealityGUIController : MonoBehaviour
     /// The point cloud object in the scene.
     /// </summary>
     public TangoPointCloud m_pointCloud;
+	public CustomPointCloudListener m_pointListener;
 
     private const float FPS_UPDATE_FREQUENCY = 1.0f;
     private string m_fpsText;
@@ -395,10 +402,40 @@ public class AugmentedRealityGUIController : MonoBehaviour
             {
                 // Found a marker, select it (so long as it isn't disappearing)!
                 GameObject tapped = hitInfo.collider.gameObject;
-                if (!tapped.GetComponent<Animation>().isPlaying)
+                if (tapped.GetComponent<ARLocationCharacter>())
                 {
-                    m_selectedMarker = tapped.GetComponent<ARLocationMarker>();
-                }
+					tapped.GetComponent<ARLocationCharacter>().beDamaged(55);
+				} else if (tapped.GetComponent<ARLocationSpawnPoint>())
+				{
+					tapped.GetComponent<ARLocationSpawnPoint>().beDamaged(55);
+				} else {
+					Vector3 planeCenter;
+					
+					// Ensure the location is always facing the camera.  This is like a LookRotation, but for the Y axis.
+					Vector3 up = new Vector3(0,1,0);
+					Vector3 forward;
+					if (Vector3.Angle(up, cam.transform.forward) < 175)
+					{
+						Vector3 right = Vector3.Cross(up, cam.transform.forward).normalized;
+						forward = Vector3.Cross(right, up).normalized;
+					}
+					else
+					{
+						// Normal is nearly parallel to camera look direction, the cross product would have too much
+						// floating point error in it.
+						forward = Vector3.Cross(up, cam.transform.right);
+					}
+					if(mode == MODE.ZOMBIE){
+						GameObject zombie = Instantiate(m_prefabLocation, hitInfo.point+new Vector3(0,0.1f,0), Quaternion.LookRotation(forward * -1, up)) as GameObject;
+						//zombie.GetComponent<Rigidbody>().velocity = (forward * -1 /2);
+					}else if(mode == MODE.COFFIN){
+						Instantiate(coffin, hitInfo.point, Quaternion.LookRotation(forward * -1, up));
+					}else if(mode == MODE.SHOOT){
+						GameObject ball = Instantiate(bullet, Camera.main.transform.position - (Camera.main.transform.up * bullet.transform.localScale.y), Quaternion.LookRotation(forward * -1, up)) as GameObject;
+						ball.GetComponent<Rigidbody>().velocity = (Camera.main.transform.forward * 5) + (Camera.main.transform.up * 5 / 2);
+					}
+					m_selectedMarker = null;
+				}
             }
             else
             {
@@ -426,7 +463,14 @@ public class AugmentedRealityGUIController : MonoBehaviour
                     // floating point error in it.
                     forward = Vector3.Cross(up, cam.transform.right);
                 }
-                Instantiate(m_prefabLocation, planeCenter, Quaternion.LookRotation(forward, up));
+				if(mode == MODE.ZOMBIE){
+                Instantiate(m_prefabLocation, planeCenter, Quaternion.LookRotation(forward * -1, up));
+				}else if(mode == MODE.COFFIN){
+					Instantiate(coffin, planeCenter, Quaternion.LookRotation(forward * -1, up));
+				}else if(mode == MODE.SHOOT){
+					GameObject ball = Instantiate(bullet, Camera.main.transform.position - (Camera.main.transform.up * bullet.transform.localScale.y), Quaternion.LookRotation(forward * -1, up)) as GameObject;
+					ball.GetComponent<Rigidbody>().velocity = (Camera.main.transform.forward * 5) + (Camera.main.transform.up * 5 / 2);
+				}
                 m_selectedMarker = null;
             }
         }
@@ -450,4 +494,10 @@ public class AugmentedRealityGUIController : MonoBehaviour
             return;
         }
     }
+
+	public void setMode(string modeStr)
+	{
+		MODE newMode = (MODE)System.Enum.Parse( typeof( MODE ), modeStr );
+		mode = newMode;
+	}
 }

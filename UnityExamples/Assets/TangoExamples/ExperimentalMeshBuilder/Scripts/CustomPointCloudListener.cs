@@ -699,4 +699,6 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
             m_pause = !m_pause;
         }
     }
+
+
 }
