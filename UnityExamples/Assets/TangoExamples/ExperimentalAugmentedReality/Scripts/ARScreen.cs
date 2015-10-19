@@ -285,7 +285,13 @@ public class ARScreen : MonoBehaviour
                               (float)poseData.orientation[1],
                               (float)poseData.orientation[2],
                               (float)poseData.orientation[3]);
-        m_imuTc = Matrix4x4.TRS(position, quat, new Vector3(1.0f, 1.0f, 1.0f));
+		//transform.right;
+		//testPosition = position
+		Vector3 right = Vector3.right*1000;
+		position += right;
+		m_imuTc = Matrix4x4.TRS(position, quat, new Vector3(1.0f, 1.0f, 1.0f));
+
+
         m_dTuc = Matrix4x4.Inverse(m_imuTd) * m_imuTc * m_cTuc;
     }
     
